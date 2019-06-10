@@ -11,10 +11,10 @@
   (:require [bit-core.utils :refer :all])
   (:require [bit-core.operation :as op]))
 
-(defn foo
-  "I don't do a whole lot."
+(defn print-recur
   [x]
-  (println x "Hello, World!"))
+    (println x)
+    x)
 
 (def ticker-history-url "https://crix-api-endpoint.upbit.com/v1/crix/candles/")
 (def ticker-url "https://api.coinone.co.kr/ticker/")
@@ -56,11 +56,11 @@
 (def mongo-connection (-> (mg/connect) (mg/get-db "bit-core") ))
 
 (defn generate-obj-id
-  [ row ]
+  [ row unit ]
     (let [ dt (row (keyword :candleDateTime))
            sym (:code row) ]
 
-    (str sym "!" dt)))
+    (str sym "!" unit "!" dt)))
 
 (defn conv-date-format 
   [ d ]
@@ -74,34 +74,34 @@
     (map (fn [x] (assoc x :site site )) ts))
 
 (defn before-insert-upbit
-  [ts]
+  [ ts unit ]
     (->> ts
          (map (fn [x] (assoc x :candleDateTime (conv-date-format (:candleDateTime x)))))
          (map (fn [x] (assoc x :code (-> x :code (str/split #"-") last))))
          (tag-source-site "upbit")
-         (map (fn [x] (assoc x :_id (generate-obj-id x))))))
+         (map (fn [x] (assoc x :_id (generate-obj-id x unit))))))
 
-(defn print-recur
-  [x]
-    (println x)
-    x)
 
-(defn log-before-store
-  [ ts ] 
-    (log/info ts)
-    ts)
+(defn log-price-row
+  [row]
+    (log/info (str "Insert " (:code row) " AT " (:candleDateTime row) " "  (:unit row) "U"))
+    row)
 
 (defn store-time-series
-  [ db ts ] 
-    (let [ cts (->>  ts before-insert-upbit) ]
+  [ db ts unit ] 
+    (let [ cts (-> ts (before-insert-upbit unit)) ]
       (mc/insert-batch db "bitts" cts)
-        (-> cts
+        (->> cts
+            (map log-price-row)
             last 
             :candleDateTime
             timefstr)))
 
-(def store (partial store-time-series mongo-connection))
+(defn store
+  [ ts ]
+    (store-time-series mongo-connection ts 10))    
 
+;(def store (partial store-time-series mongo-connection))
 
 (defn get-start-time-from-end-time
   [ end-time unit tick cnt ] 
@@ -119,18 +119,18 @@
   [ genesis-time sym unit tick bulk-cnt start-time ]
     (let [ routine (partial collect-api-crix  genesis-time sym unit tick bulk-cnt) 
            get-time (fn [x] (get-start-time x unit tick bulk-cnt)) 
-           req-routine (fn [x] (api-crix-endpoint-from-to x sym unit tick bulk-cnt)) ]
+           req-routine (fn [x] (api-crix-endpoint-from-to x sym unit tick bulk-cnt)) 
+           store-lambda (fn [x] (store-time-series mongo-connection x tick)) ]
 
       (log/info (str "collect-api-crix " sym  " start from " (get-time start-time) " to " start-time))
 
       (if (t/after? genesis-time start-time)
         nil
         (do 
-          (->>  start-time 
-                req-routine  
-                store
-                print-recur
-                routine)))))
+          (->> start-time 
+              req-routine  
+              store-lambda 
+              routine)))))
 
 (defn get-min-timestamp
   [ sym unit ]
@@ -149,39 +149,41 @@
     (let [  db-start-time (get-min-timestamp sym tick) 
             start-time (if (nil? db-start-time) first-req-time db-start-time)
             genesis-time (get-start-timestamp start-time unit tick (* cnt rept )) ]
-
       (collect-api-crix genesis-time sym unit tick cnt start-time))
     "ok")
 
-;(get-min-timestamp "BTC" 10) 
-;(collect-api-crix-a "BTC" "minutes" 10 10 10)
+;(collect-api-crix-a "XRP" "minutes" 10 10 10)
 
-(def gen-time (t/date-time 2019 1 28))
+(def gen-time (t/date-time 2019 1 1))
 (def target-time (t/date-time 2019 5 30))
 
 (def req-ticks [1 10 15 20 30])
-(def req-ticks [10])
+(def req-ticks [1 10])
 
-(def req-coins ["BTC" "EOS" "BSV" "BCH" "ETH" "BTT" "COSM" "BTG" "ADA" "ATOM" "TRX" "NPXS"])
+(def req-coins ["XRP" "BTC" "EOS" "BSV" "BCH" "ETH" "BTT" "COSM" "BTG" "ADA" "ATOM" "TRX" "NPXS"])
+(def req-coins-s [])
+
 (def bulk-cnt 100)
 (def recur-max-cnt 10)
+
+(def for-iter-max-cnt 10000)
 
 (defn cartesian
   [ a-set b-set ]
     (for [a a-set b b-set] [ a b ]))
 
-(cartesian req-coins req-ticks)
+;(cartesian req-coins req-ticks)
 
 (defn collect-crix-site 
   [ coins ticks ] 
-  (let [ task-set (cartesian coins ticks) ]
-    (map (fn [x] (collect-api-crix-a (first x) "minutes" (last x) bulk-cnt recur-max-cnt)) task-set)))
+    (let [ task-set (cartesian coins ticks) ]
+      (for [ x (range for-iter-max-cnt) ]
+        (map (fn [x] (collect-api-crix-a (first x) "minutes" (last x) bulk-cnt recur-max-cnt)) task-set))))
 
-(collect-crix-site req-coins req-ticks)
+;(collect-crix-site req-coins req-ticks)
 
-   ;(map  task-set ))))
+;(map  task-set ))))
 
-;(def t (op/get-min-timestamp mongo-connection "bitts" "BTC" ))
 ;(pprint t)
 
 ;(def target-time (get-min-timestamp-in-db "BTC"))
@@ -189,9 +191,6 @@
 ;(println target-time)
 
 ;(println target-time)
-
-;(collect-api-crix gen-time "BTC" "minutes" 10 10 target-time)
-
 
 ;(defn req-ticker-history 
 ;  [sym start-time end-time unit]
