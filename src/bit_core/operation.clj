@@ -12,3 +12,13 @@
         :min-time
         timefstr))
 
+(defn get-max-timestamp 
+  [ sym unit db collection ]
+    (-> (mc/aggregate db collection 
+                  [ { $match {$and [ {:unit unit} {:code sym } ] } } { $group  {:_id "$code" :max-time {$max "$candleDateTime"} } } ] :cursor {:batch-size 0})
+        first
+        :max-time
+        timefstr))
+
+
+
