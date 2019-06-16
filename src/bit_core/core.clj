@@ -82,6 +82,7 @@
   [ sym request-time ]
     (let [ book (-> sym req-order-book) 
            currency (entry-array-vfk book "currency")
+
            ask (->> (entry-array-vfk book "ask") val (sort-by :price ))
            bid (->> (entry-array-vfk book "bid") val (sort-by :price )) ]
 
@@ -184,7 +185,9 @@
           (request-api-crix sym unit tick cnt)))
 
 (def test-his-req (api-crix-endpoint (t/date-time 2019 5 1) "BTC" "minutes" 10 10))
-(def mongo-connection (-> (mg/connect) (mg/get-db "bit-core") ))
+
+;(def mongo-connection (-> (mg/connect) (mg/get-db "bit-core") ))
+(def mongo-connection nil)
 
 (defn generate-obj-id
   [ row unit ]
