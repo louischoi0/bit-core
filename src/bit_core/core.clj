@@ -184,8 +184,6 @@
           (get-end-time unit tick cnt)
           (request-api-crix sym unit tick cnt)))
 
-(def test-his-req (api-crix-endpoint (t/date-time 2019 5 1) "BTC" "minutes" 10 10))
-
 ;(def mongo-connection (-> (mg/connect) (mg/get-db "bit-core") ))
 (def mongo-connection nil)
 

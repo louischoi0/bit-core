@@ -7,8 +7,9 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/tools.logging "0.4.1"]
                  [org.clojure/data.csv "0.1.4"]
+                 [overtone/at-at "1.2.0"]
                  [com.taoensso/carmine "2.19.1"]
-
+  
                  [org.clojure/tools.cli "0.4.2"] 
 
                  [clj-http "3.10.0"]
@@ -19,5 +20,5 @@
   
   :profiles {:uberjar {:aot :all}}
 
-  :main bit-core.core)
+  :main bit-core.ticker)
 

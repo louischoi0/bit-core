@@ -1,5 +1,6 @@
 (ns bit-core.utils
   (:require [clj-time.core :as t])
+  (:require [clj-time.local :as l])
   (:require [clj-time.coerce :as c])
   (:require [clj-time.format :as fm]))
 
@@ -9,6 +10,11 @@
 
 (defn strftime [x] (fm/unparse req-dt-fmt x))
 (defn timefstr [x] (if (nil? x) nil (fm/parse req-dt-fmt x)))
+
+
+(defn conv-time-zone-seoul
+  [ date-time ]
+    (t/from-time-zone date-time (t/time-zone-for-offset -16)))
 
 (defn get-target-time
   [ target-time unit tick cnt op]
