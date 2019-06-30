@@ -17,13 +17,16 @@
   (:require [bit-core.redis :refer :all])
   (:require [clojure.data.csv :as csv])
   (:require [bit-core.operation :as op])
-  
   (:gen-class))
+
+(use 'bit-core.utils)
 
 ; To Replace file log or stream log.
 (defn logger
   [ lv msg ]
-    (println msg))
+    (let [ timestamp (-> (l/local-now) c/to-long) 
+           surfix (str "[INFO] " (-> timestamp c/from-long conv-time-zone-seoul) " : ") ]
+      (println (str surfix msg))))
 
 (defn no-op
   [x] 
@@ -151,12 +154,6 @@
 ;
 ;(-> book (price-qty-series-to-redis-server :ask 1239)) 
 
-(defn req-ticker
-  [sym]
-    (-> ticker-url 
-         (client/get {:query-params {:currency sym} {:format "json"} {:accept :json} })
-         (:body)
-         (json/read-str {:key-fn keyword})))
 
 (defn bind-unit-api-crix-endpoint
   [ unit tick ]
@@ -184,8 +181,7 @@
           (get-end-time unit tick cnt)
           (request-api-crix sym unit tick cnt)))
 
-;(def mongo-connection (-> (mg/connect) (mg/get-db "bit-core") ))
-(def mongo-connection nil)
+(def mongo-connection (-> (mg/connect) (mg/get-db "bit-core") ))
 
 (defn generate-obj-id
   [ row unit ]

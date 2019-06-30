@@ -37,6 +37,28 @@
         (- (c/to-long start-time))
         (/ 1000 (* (unit-dict (keyword unit)) tick))))
 
+(defn getva
+  [ fi ] 
+    (:data @fi))
 
+(defn getsa
+  [ fi ]
+    (:status @fi))
+
+(defn getv
+  [ fi ]
+    @(getva fi))
+
+(defn gets
+  [ fi ]
+    @(getsa fi))
+
+(defn lock-
+  [ fi lv ]
+    (reset! (getsa fi) lv))
+
+(defn unlock-
+  [ fi ]
+    (reset! (getsa fi) 0))
 
 
