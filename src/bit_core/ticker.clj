@@ -83,7 +83,7 @@
   [ source data field ]
     (let [ sym (-> data :currency) 
            skey (-> sym (str "-" field)) ]
-      (cc/log (str "Store Ticker " field "Data " sym ))
+      (cc/log (str "Store Ticker " field "Data " sym " at " (str source "-" skey)))
       (wcar* (car/lpush (str source "-" skey) ((keyword field) data)))
         "OK"))
     
@@ -96,8 +96,8 @@
     (let [ data (req-ticker sym)
            targets ["volume" "last"] ] 
      (cc/log (str "Request Ticker " sym ))
-     (-store-field data source "volume")
-     (-store-field data source "last") 
+     (-store-field source data "volume")
+     (-store-field source data "last") 
       data))
 
 (defn req-ticker-and-store 
