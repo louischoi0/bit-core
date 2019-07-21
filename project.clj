@@ -17,8 +17,6 @@
                  [clj-time "0.15.0"]
                  [com.novemberain/monger "3.1.0"]
                  [org.clojure/data.json "0.2.6"]]
-  
-  :profiles {:uberjar {:aot :all}}
 
   :main bit-core.ticker)
 

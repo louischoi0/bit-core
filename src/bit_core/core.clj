@@ -16,8 +16,7 @@
   (:require [bit-core.utils :refer :all])
   (:require [bit-core.redis :refer :all])
   (:require [clojure.data.csv :as csv])
-  (:require [bit-core.operation :as op])
-  (:gen-class))
+  (:require [bit-core.operation :as op]))
 
 (use 'bit-core.utils)
 
@@ -336,12 +335,13 @@
     (-> options
         k))
 
-(defn -main
-  [ & args ]
-    (let [ options (opt-parse args) ]
-      (if (-> options (get-opt :-op) (= "orderbook"))
-        (do (let [ sym (get-opt options :-s) request-time (get-opt options :-rqt) ]
-          (order-book-request-handler sym request-time))))))
+;
+;(defn -main
+;  [ & args ]
+;    (let [ options (opt-parse args) ]
+;      (if (-> options (get-opt :-op) (= "orderbook"))
+;        (do (let [ sym (get-opt options :-s) request-time (get-opt options :-rqt) ]
+;          (order-book-request-handler sym request-time))))))
 
 ;(map  task-set ))))
 ;(pprint t)

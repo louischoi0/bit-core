@@ -17,7 +17,9 @@
   (:require [bit-core.core :as cc])
   (:require [bit-core.redis :refer :all])
   (:require [clojure.data.csv :as csv])
-  (:require [bit-core.operation :as op]))
+  (:require [bit-core.operation :as op])
+  
+  (:gen-class))
 
 (use 'overtone.at-at)
 (use 'bit-core.core)
@@ -28,6 +30,12 @@
 
 (def flush-inc-cnt (atom 0))
 (def flushed-inc-cnt (atom 0))
+
+(defn parse-number
+    "Reads a number from a string. Returns nil if not a number."
+      [s]
+        (if (re-find #"^-?\d+\.?\d*$" s)
+              (read-string s)))
 
 (defn inc-atomic
   [ acnt ] 
@@ -102,7 +110,7 @@
 
 (defn req-ticker-and-store 
   [ sym ]
-    (-req-ticker-and-store "coinone" sym))
+    (-req-ticker-and-store "coinone" sym ))
 
 (defn store-timestamp 
   [ series-key ] 
@@ -150,12 +158,18 @@
       (unlock- fi))) 
 
 (defn ticker-routine-by-sym
-  [ sym ]
-    (-ticker-routine-by-sym data-to-flush sym))
+  [ sym pool interval]
+  (try 
+    (-ticker-routine-by-sym data-to-flush sym)
+   (catch Exception e
+     (do 
+       (println "hiroo")
+        (prn e) 
+        (every interval #(ticker-routine-by-sym sym pool))))))
 
 (defn schedule-ticker 
   [ pool  sym interval ]
-    (every interval #(ticker-routine-by-sym sym) pool))
+    (every interval #(ticker-routine-by-sym sym pool interval) pool))
 
 (defn schedule-time-keeper 
   [ pool interval ]
@@ -172,23 +186,24 @@
       (->> (wcar* (mapv f all-series-ids))
            (map (fn [x y] { (keyword x) y }) all-series-ids)
            (reduce conj))))
-
+[ "BTC" "ETH" "XRP" "BCH" "EOS" "BSV" ]
 (defn main-ticker 
   [ interval coins ] 
     (let [ ticker-pool (mk-pool)
            timestamp-pool (mk-pool) 
            flush-pool (mk-pool) ]
+      (schedule-ticker ticker-pool "BTC" interval)
+      (schedule-ticker ticker-pool "ETH" interval)
+      (schedule-ticker ticker-pool "XRP" interval)
+      (schedule-ticker ticker-pool "BCH" interval)
+      (schedule-ticker ticker-pool "EOS" interval)
+      (schedule-ticker ticker-pool "BSV" interval)
       (schedule-time-keeper timestamp-pool interval)
-      (every 5000 #(-flush-routine data-to-flush 30 400) flush-pool)
-      (map (fn [x] (schedule-ticker ticker-pool x interval)) coins)))
+      (every 5000 #(-flush-routine data-to-flush 30 400) flush-pool)))
 
 (defn slice-redis-series
   [ cnt-to-cut ]
     (do-all-series #(car/ltrim 0 cnt-to-cut)))
-
-(defn main**
-  []
-    (main-ticker 3000 coins))
 
 (defn clear-
   []
@@ -203,13 +218,7 @@
 
 (def datas (do-all-series #(car/rpop %1)))
 
-;(-flush-routine data-to-flush 10 100)
-;(-> data-to-flush getv count)
-;(-> @flush-inc-cnt)
-;(-> @flushed-inc-cnt)
-;(len-)
-
-;(clear-)
-;(len-)
-;(do-all-series #(car/rpop %1)) 
-
+(defn -main
+  [& args]
+    (def intv (* 1000 (double (parse-number (first args)) ) ) )
+    (main-ticker intv coins))
